@@ -50,6 +50,7 @@ export default function Desktop() {
     const onKeyUp = (event: KeyboardEvent) => display.key(event, false)
     const onBlur = () => display.releaseKeys()
     const onPointerMove = (event: PointerEvent) => display.pointer(event)
+    const onPointerLeave = () => display.pointerLeave()
     const onPointerDown = (event: PointerEvent) => {
 
       viewport.focus()
@@ -77,6 +78,7 @@ export default function Desktop() {
     viewport.addEventListener('keyup', onKeyUp)
     viewport.addEventListener('blur', onBlur)
     viewport.addEventListener('pointermove', onPointerMove)
+    viewport.addEventListener('pointerleave', onPointerLeave)
     viewport.addEventListener('pointerdown', onPointerDown)
     viewport.addEventListener('pointerup', onPointerUp)
     viewport.addEventListener('wheel', onWheel, { passive: false })
@@ -120,6 +122,7 @@ export default function Desktop() {
       viewport.removeEventListener('keyup', onKeyUp)
       viewport.removeEventListener('blur', onBlur)
       viewport.removeEventListener('pointermove', onPointerMove)
+      viewport.removeEventListener('pointerleave', onPointerLeave)
       viewport.removeEventListener('pointerdown', onPointerDown)
       viewport.removeEventListener('pointerup', onPointerUp)
       viewport.removeEventListener('wheel', onWheel)
@@ -143,19 +146,23 @@ export default function Desktop() {
       aria-label="GraniteOS 2 desktop"
     >
 
-      <canvas
-        ref={canvasRef}
-        className="max-h-full max-w-full cursor-none"
-        width={1280}
-        height={720}
-      />
+      <div className="relative max-h-full max-w-full">
 
-      <canvas
-        ref={cursorRef}
-        className="pointer-events-none absolute left-1/2 top-1/2 max-h-full max-w-full -translate-x-1/2 -translate-y-1/2"
-        width={1280}
-        height={720}
-      />
+        <canvas
+          ref={canvasRef}
+          className="block max-h-full max-w-full cursor-none"
+          width={1280}
+          height={720}
+        />
+
+        <canvas
+          ref={cursorRef}
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          width={1280}
+          height={720}
+        />
+
+      </div>
 
       {status && (
 

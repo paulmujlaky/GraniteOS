@@ -208,6 +208,7 @@ export class DisplayClient {
   private cursorX = 0
   private cursorY = 0
   private cursorVisible = false
+  private hasPointer = false
   private framePending = false
   private inputOffset = 0
   private inputCapacity = 0
@@ -323,7 +324,19 @@ export class DisplayClient {
     const x = Math.floor((event.clientX - rect.left) * this.canvas.width / rect.width)
     const y = Math.floor((event.clientY - rect.top) * this.canvas.height / rect.height)
 
+    // Host position is authoritative; QEMU mouse_set often flashes (0,0).
+    this.cursorX = x
+    this.cursorY = y
+    this.hasPointer = true
+    this.drawCursor()
     this.send({ type: 'pointer', x, y })
+
+  }
+
+  pointerLeave() {
+
+    this.hasPointer = false
+    this.drawCursor()
 
   }
 
@@ -401,8 +414,7 @@ export class DisplayClient {
       this.setCursor(data)
       break
     case 'cursor-position':
-      this.cursorX = Number(data.x)
-      this.cursorY = Number(data.y)
+      // Shape/visibility from QEMU only; position comes from host pointer.
       this.cursorVisible = Boolean(data.visible)
       this.drawCursor()
       break
@@ -512,7 +524,7 @@ export class DisplayClient {
 
     this.cursorContext.clearRect(0, 0, this.cursorCanvas.width, this.cursorCanvas.height)
 
-    if (this.cursor && this.cursorVisible) {
+    if (this.cursor && this.cursorVisible && this.hasPointer) {
 
       this.cursorContext.putImageData(
         this.cursor.image,

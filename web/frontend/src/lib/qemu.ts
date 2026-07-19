@@ -6,49 +6,27 @@ export interface QemuModule {
   arguments: string[]
   pty?: unknown
   diskKey?: string
-
   mainScriptUrlOrBlob?: string
-
   preRun?: Array<() => void>
   locateFile?: (path: string, prefix: string) => string
-
   addRunDependency?: (id: string) => void
   removeRunDependency?: (id: string) => void
-
   FS_createPath?: (parent: string, path: string, canRead: boolean, canWrite: boolean) => void
   FS_createDataFile?: (parent: string, name: string | null, data: Uint8Array, canRead: boolean, canWrite: boolean, canOwn: boolean) => void
-
-  FS?: {
-    readFile: (path: string, opts?: { encoding?: string }) => Uint8Array
-  }
-
+  FS?: { readFile: (path: string, opts?: { encoding?: string }) => Uint8Array }
   PThread?: { terminateAllThreads: () => void }
   HEAP32?: Int32Array
   HEAPU8?: Uint8Array
-
-  TTY?: {
-
-    stream_ops: {
-
-      poll: (stream: unknown, timeout: number) => number
-
-    }
-
-  }
+  TTY?: { stream_ops: { poll: (stream: unknown, timeout: number) => number } }
 
 }
 
 declare global {
 
-  interface Window {
-
-    Module?: QemuModule
-
-  }
+  interface Window { Module?: QemuModule }
 
 }
 
-// Single emulated core to reduce host CPU.
 const QEMU_ARGS = [
 
   '-machine', 'virt',
@@ -69,7 +47,6 @@ async function fetchAsset(url: string, label: string): Promise<ArrayBuffer> {
 
   const res = await fetch(url)
   if (!res.ok) throw new Error(`${label}: ${res.status}`)
-
   return res.arrayBuffer()
 
 }
@@ -77,7 +54,6 @@ async function fetchAsset(url: string, label: string): Promise<ArrayBuffer> {
 function preloadAssets(module: QemuModule, kernel: ArrayBuffer, disk: Uint8Array) {
 
   const orig = module.preRun ?? []
-
   module.preRun = [...orig, () => {
 
     module.FS_createPath?.('/', 'pack', true, true)
@@ -92,7 +68,6 @@ function patchTtyPoll(module: QemuModule) {
 
   const ops = module.TTY!.stream_ops
   const oldPoll = ops.poll.bind(ops)
-
   const pty = module.pty
 
   ops.poll = (stream, timeout) => {
@@ -181,8 +156,7 @@ export async function startQemu(pty: unknown, onProgress: (msg: string) => void)
   } else {
 
     onProgress('Downloading disk image...')
-    const raw = await fetchAsset('/assets/disk.img', 'disk image')
-    disk = new Uint8Array(raw)
+    disk = new Uint8Array(await fetchAsset('/assets/disk.img', 'disk image'))
 
     try {
 
@@ -202,9 +176,7 @@ export async function startQemu(pty: unknown, onProgress: (msg: string) => void)
 
     arguments: [...QEMU_ARGS],
     pty,
-
     mainScriptUrlOrBlob: `${location.origin}/qemu/out.js`,
-
     locateFile: (path) => `/qemu/${path}`,
 
   }
@@ -214,9 +186,7 @@ export async function startQemu(pty: unknown, onProgress: (msg: string) => void)
 
   onProgress('Starting GraniteOS...')
 
-  const url = `${location.origin}/qemu/out.js`
-
-  const { default: init } = await import(/* @vite-ignore */ url) as {
+  const { default: init } = await import(/* @vite-ignore */ `${location.origin}/qemu/out.js`) as {
 
     default: (m: QemuModule) => Promise<void>
 
@@ -224,18 +194,16 @@ export async function startQemu(pty: unknown, onProgress: (msg: string) => void)
 
   await init(module)
   patchTtyPoll(module)
-
   return module
 
 }
 
 const GRANITE2_DISK_KEY = 'graniteos-2-disk.img'
-const GRANITE2_QEMU_BUILD = 'full-reconcile-1'
+const GRANITE2_QEMU_BUILD = 'simple-1'
 
 function preloadGranite2(module: QemuModule, kernel: ArrayBuffer, bundle: ArrayBuffer, disk: Uint8Array) {
 
   const orig = module.preRun ?? []
-
   module.preRun = [...orig, () => {
 
     module.FS_createPath?.('/', 'pack', true, true)
@@ -247,7 +215,7 @@ function preloadGranite2(module: QemuModule, kernel: ArrayBuffer, bundle: ArrayB
 
 }
 
-/** Load the GUI GraniteOS 2 image with the native browser display backend. */
+/** GraniteOS 2 GUI. No NIC: browser cannot do raw TCP, only Fetch/HTTP-proxy stacks. */
 export async function startGranite2(
   pty: unknown,
   channel: string,
@@ -290,6 +258,9 @@ export async function startGranite2(
 
   onProgress('Loading the WebAssembly emulator...')
 
+  // 256M guest + tb-size=128 fits the fixed 1GiB Wasm heap. No virtio-net:
+  // a NIC starts netstack/metrics which hang under browser TCG without a
+  // real TCP path; GOS2 clients speak raw TCP, not the Fetch HTTP-proxy model.
   const args = [
 
     '-machine', 'virt,gic-version=3',
@@ -304,8 +275,8 @@ export async function startGranite2(
     '-nic', 'none',
     '-kernel', '/pack/granite-kernel.bin',
     '-initrd', '/pack/bundle.img',
-    '-drive', 'if=none,format=raw,id=granite-disk,file=/pack/disk.img',
-    '-device', 'virtio-blk-device,drive=granite-disk',
+    '-drive', 'if=none,format=raw,id=disk0,file=/pack/disk.img',
+    '-device', 'virtio-blk-device,drive=disk0',
     '-device', 'virtio-gpu-device',
     '-device', 'virtio-keyboard-device',
     '-device', 'virtio-tablet-device',
@@ -317,7 +288,6 @@ export async function startGranite2(
     arguments: args,
     pty,
     diskKey: GRANITE2_DISK_KEY,
-
     mainScriptUrlOrBlob: `${location.origin}/qemu/wasm/out.js?v=${GRANITE2_QEMU_BUILD}`,
     locateFile: (path) => `/qemu/wasm/${path}?v=${GRANITE2_QEMU_BUILD}`,
 
@@ -328,16 +298,12 @@ export async function startGranite2(
 
   onProgress('Starting GraniteOS 2...')
 
-  const url = `${location.origin}/qemu/wasm/out.js?v=${GRANITE2_QEMU_BUILD}`
-  const { default: init } = await import(/* @vite-ignore */ url) as {
-
-    default: (m: QemuModule) => Promise<void>
-
-  }
+  const { default: init } = await import(
+    /* @vite-ignore */ `${location.origin}/qemu/wasm/out.js?v=${GRANITE2_QEMU_BUILD}`
+  ) as { default: (m: QemuModule) => Promise<void> }
 
   await init(module)
   patchTtyPoll(module)
-
   return module
 
 }
