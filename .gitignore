@@ -8,3 +8,5 @@ report.md
 
 /web/frontend/node_modules
 /web/frontend/dist
+/web/frontend/assets
+/web/frontend/qemu
