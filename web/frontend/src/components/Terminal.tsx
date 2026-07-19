@@ -69,11 +69,15 @@ export default function Terminal() {
 
     termRef.current = term
 
-    const ro = new ResizeObserver(() => fit.fit())
-    ro.observe(el)
-
     let active = true
     let statusLine = false
+
+    const ro = new ResizeObserver(() => {
+
+      if (active) fit.fit()
+
+    })
+    ro.observe(el)
 
     const setStatus = (msg: string) => {
 
@@ -108,8 +112,15 @@ export default function Terminal() {
 
     startQemu(slave, setStatus).then((mod) => {
 
+      if (!active) {
+
+        void stopQemu(mod)
+        return
+
+      }
+
       qemu = mod
-      if (active) clearStatus()
+      clearStatus()
 
     }).catch((err: unknown) => {
 
@@ -131,10 +142,10 @@ export default function Terminal() {
       active = false
 
       document.removeEventListener('visibilitychange', onHidden)
+      ro.disconnect()
 
       stopQemu(qemu).finally(() => {
 
-        ro.disconnect()
         term.dispose()
         termRef.current = null
 

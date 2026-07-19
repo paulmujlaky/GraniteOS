@@ -5,6 +5,7 @@ export interface QemuModule {
 
   arguments: string[]
   pty?: unknown
+  diskKey?: string
 
   mainScriptUrlOrBlob?: string
 
@@ -22,6 +23,8 @@ export interface QemuModule {
   }
 
   PThread?: { terminateAllThreads: () => void }
+  HEAP32?: Int32Array
+  HEAPU8?: Uint8Array
 
   TTY?: {
 
@@ -132,7 +135,7 @@ export async function stopQemu(module: QemuModule | null): Promise<void> {
 
     try {
 
-      await saveDisk(disk)
+      await saveDisk(disk, module.diskKey)
 
     } catch (err) {
 
@@ -213,6 +216,119 @@ export async function startQemu(pty: unknown, onProgress: (msg: string) => void)
 
   const url = `${location.origin}/qemu/out.js`
 
+  const { default: init } = await import(/* @vite-ignore */ url) as {
+
+    default: (m: QemuModule) => Promise<void>
+
+  }
+
+  await init(module)
+  patchTtyPoll(module)
+
+  return module
+
+}
+
+const GRANITE2_DISK_KEY = 'graniteos-2-disk.img'
+const GRANITE2_QEMU_BUILD = 'full-reconcile-1'
+
+function preloadGranite2(module: QemuModule, kernel: ArrayBuffer, bundle: ArrayBuffer, disk: Uint8Array) {
+
+  const orig = module.preRun ?? []
+
+  module.preRun = [...orig, () => {
+
+    module.FS_createPath?.('/', 'pack', true, true)
+    module.FS_createDataFile?.('/pack', 'granite-kernel.bin', new Uint8Array(kernel), true, true, true)
+    module.FS_createDataFile?.('/pack', 'bundle.img', new Uint8Array(bundle), true, true, true)
+    module.FS_createDataFile?.('/pack', 'disk.img', disk, true, true, true)
+
+  }]
+
+}
+
+/** Load the GUI GraniteOS 2 image with the native browser display backend. */
+export async function startGranite2(
+  pty: unknown,
+  channel: string,
+  onProgress: (msg: string) => void,
+): Promise<QemuModule> {
+
+  onProgress('Loading GraniteOS 2 assets...')
+
+  const [kernel, bundle, cachedDisk] = await Promise.all([
+
+    fetchAsset('/assets/gos2/granite-kernel.bin', 'GraniteOS 2 kernel'),
+    fetchAsset('/assets/gos2/bundle.img', 'GraniteOS 2 bundle'),
+    loadDisk(GRANITE2_DISK_KEY),
+
+  ])
+
+  let disk: Uint8Array
+
+  if (cachedDisk) {
+
+    onProgress('Restoring the GraniteOS 2 disk...')
+    disk = cachedDisk
+
+  } else {
+
+    onProgress('Loading the GraniteOS 2 disk...')
+    disk = new Uint8Array(await fetchAsset('/assets/gos2/disk.img', 'GraniteOS 2 disk'))
+
+    try {
+
+      await saveDisk(disk, GRANITE2_DISK_KEY)
+
+    } catch (err) {
+
+      console.warn('[qemu] failed to cache the GraniteOS 2 disk:', err)
+
+    }
+
+  }
+
+  onProgress('Loading the WebAssembly emulator...')
+
+  const args = [
+
+    '-machine', 'virt,gic-version=3',
+    '-cpu', 'cortex-a57',
+    '-smp', '1',
+    '-m', '256M',
+    '-global', 'virtio-mmio.force-legacy=false',
+    '-display', `wasm,channel=${channel}`,
+    '-serial', 'stdio',
+    '-monitor', 'none',
+    '-accel', 'tcg,tb-size=128',
+    '-nic', 'none',
+    '-kernel', '/pack/granite-kernel.bin',
+    '-initrd', '/pack/bundle.img',
+    '-drive', 'if=none,format=raw,id=granite-disk,file=/pack/disk.img',
+    '-device', 'virtio-blk-device,drive=granite-disk',
+    '-device', 'virtio-gpu-device',
+    '-device', 'virtio-keyboard-device',
+    '-device', 'virtio-tablet-device',
+
+  ]
+
+  const module: QemuModule = {
+
+    arguments: args,
+    pty,
+    diskKey: GRANITE2_DISK_KEY,
+
+    mainScriptUrlOrBlob: `${location.origin}/qemu/wasm/out.js?v=${GRANITE2_QEMU_BUILD}`,
+    locateFile: (path) => `/qemu/wasm/${path}?v=${GRANITE2_QEMU_BUILD}`,
+
+  }
+
+  preloadGranite2(module, kernel, bundle, disk)
+  window.Module = module
+
+  onProgress('Starting GraniteOS 2...')
+
+  const url = `${location.origin}/qemu/wasm/out.js?v=${GRANITE2_QEMU_BUILD}`
   const { default: init } = await import(/* @vite-ignore */ url) as {
 
     default: (m: QemuModule) => Promise<void>

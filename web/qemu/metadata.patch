@@ -1,0 +1,62 @@
+diff --git a/qapi/ui.json b/qapi/ui.json
+index 21a0301e9a..00cdb53cf8 100644
+--- a/qapi/ui.json
++++ b/qapi/ui.json
+@@ -1448,6 +1448,16 @@
+ { 'struct'  : 'DisplaySDL',
+   'data'    : { '*grab-mod'   : 'HotKeyMod' } }
+ 
++##
++# @DisplayWasm:
++#
++# WebAssembly display options.
++#
++# @channel: BroadcastChannel used by the browser display client.
++##
++{ 'struct': 'DisplayWasm',
++  'data': { '*channel': 'str' } }
++
+ ##
+ # @DisplayType:
+ #
+@@ -1482,6 +1493,8 @@
+ #
+ # @dbus: Start a D-Bus service for the display.  (Since 7.0)
+ #
++# @wasm: Stream display updates to a browser BroadcastChannel.
++#
+ # Since: 2.12
+ ##
+ { 'enum'    : 'DisplayType',
+@@ -1494,7 +1507,8 @@
+     { 'name': 'curses', 'if': 'CONFIG_CURSES' },
+     { 'name': 'cocoa', 'if': 'CONFIG_COCOA' },
+     { 'name': 'spice-app', 'if': 'CONFIG_SPICE' },
+-    { 'name': 'dbus', 'if': 'CONFIG_DBUS_DISPLAY' }
++    { 'name': 'dbus', 'if': 'CONFIG_DBUS_DISPLAY' },
++    { 'name': 'wasm' }
+   ]
+ }
+ 
+@@ -1532,7 +1546,8 @@
+       'egl-headless': { 'type': 'DisplayEGLHeadless',
+                         'if': 'CONFIG_OPENGL' },
+       'dbus': { 'type': 'DisplayDBus', 'if': 'CONFIG_DBUS_DISPLAY' },
+-      'sdl': { 'type': 'DisplaySDL', 'if': 'CONFIG_SDL' }
++      'sdl': { 'type': 'DisplaySDL', 'if': 'CONFIG_SDL' },
++      'wasm': 'DisplayWasm'
+   }
+ }
+ 
+diff --git a/ui/meson.build b/ui/meson.build
+index 0a1eea1de5..e407f7ccb8 100644
+--- a/ui/meson.build
++++ b/ui/meson.build
+@@ -20,6 +20,7 @@ system_ss.add(files(
+   'ui-qmp-cmds.c',
+   'util.c',
+ ))
++system_ss.add(files('wasm.c'))
+ system_ss.add(when: pixman, if_true: files('console-vc.c'), if_false: files('console-vc-stubs.c'))
+ if dbus_display
+   system_ss.add(files('dbus-module.c'))
