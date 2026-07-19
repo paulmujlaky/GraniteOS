@@ -23,6 +23,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.Handle("/", http.FileServer(http.Dir(*static)))
+	mux.Handle("/network", networkHandler())
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 
 		w.Write([]byte("ok\n"))

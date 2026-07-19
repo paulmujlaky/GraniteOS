@@ -1,0 +1,7 @@
+﻿2026-07-19T16:47:08Z
+source=https://github.com/ktock/qemu-wasm
+commit=0ef7b4e2814b231705d8371dd7997f5b72e70baf
+qemu=8.2.0
+build=sab-frames-2
+features=wasm-display,sab-frame-ring,full-reconcile,coalesced-flush
+slot=1920x1080x4

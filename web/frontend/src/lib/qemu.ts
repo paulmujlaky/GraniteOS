@@ -199,7 +199,7 @@ export async function startQemu(pty: unknown, onProgress: (msg: string) => void)
 }
 
 const GRANITE2_DISK_KEY = 'graniteos-2-disk.img'
-const GRANITE2_QEMU_BUILD = 'simple-1'
+const GRANITE2_QEMU_BUILD = 'network-1'
 
 function preloadGranite2(module: QemuModule, kernel: ArrayBuffer, bundle: ArrayBuffer, disk: Uint8Array) {
 
@@ -215,7 +215,7 @@ function preloadGranite2(module: QemuModule, kernel: ArrayBuffer, bundle: ArrayB
 
 }
 
-/** GraniteOS 2 GUI. No NIC: browser cannot do raw TCP, only Fetch/HTTP-proxy stacks. */
+/** GraniteOS 2 GUI with a virtio-net connection to the same-origin server proxy. */
 export async function startGranite2(
   pty: unknown,
   channel: string,
@@ -258,21 +258,23 @@ export async function startGranite2(
 
   onProgress('Loading the WebAssembly emulator...')
 
-  // 256M guest + tb-size=128 fits the fixed 1GiB Wasm heap. No virtio-net:
-  // a NIC starts netstack/metrics which hang under browser TCG without a
-  // real TCP path; GOS2 clients speak raw TCP, not the Fetch HTTP-proxy model.
+  // Networking adds 20 MiB of up-front GraniteOS service reservations (virtio
+  // driver, netstack, and metrics). 320M leaves the GUI/taskbar enough headroom
+  // while still fitting alongside QEMU and tb-size=128 in the fixed 1GiB heap.
+  // The pre-js hook maps the socket backend to the same-origin /network WebSocket.
   const args = [
 
     '-machine', 'virt,gic-version=3',
     '-cpu', 'cortex-a57',
     '-smp', '1',
-    '-m', '256M',
+    '-m', '320M',
     '-global', 'virtio-mmio.force-legacy=false',
     '-display', `wasm,channel=${channel}`,
     '-serial', 'stdio',
     '-monitor', 'none',
     '-accel', 'tcg,tb-size=128',
-    '-nic', 'none',
+    '-netdev', 'socket,id=granite-net,connect=10.0.2.2:80',
+    '-device', 'virtio-net-device,netdev=granite-net,mac=02:00:00:00:00:01',
     '-kernel', '/pack/granite-kernel.bin',
     '-initrd', '/pack/bundle.img',
     '-drive', 'if=none,format=raw,id=disk0,file=/pack/disk.img',
