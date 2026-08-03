@@ -4,8 +4,13 @@ const BUTTON = 'flex h-11 items-center justify-center gap-2 whitespace-nowrap ro
 
 const DOWNLOADS = [
 
-  { label: 'GraniteOS 1', file: '/downloads/graniteos-1.zip' },
-  { label: 'GraniteOS 2', file: '/downloads/graniteos-2.zip' },
+  { label: 'GraniteOS 1', href: '/downloads/graniteos-1.zip', download: true },
+  { label: 'GraniteOS 2', href: '/downloads/graniteos-2.zip', download: true },
+  {
+    label: 'Windows Launcher',
+    href: 'https://github.com/elucid503/GraniteOS-2/releases/tag/Launcher',
+    download: false,
+  },
 
 ]
 
@@ -48,6 +53,25 @@ export default function Home() {
         </nav>
 
       </main>
+
+      <footer className="absolute inset-x-0 bottom-0 flex text-center items-center justify-center gap-6 px-6 py-6 text-xs text-zinc-600">
+        <a
+          href="https://github.com/elucid503/GraniteOS"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="transition-colors hover:text-zinc-400"
+        >
+          GraniteOS 1 Source Code
+        </a>
+        <a
+          href="https://github.com/elucid503/GraniteOS-2"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="transition-colors hover:text-zinc-400"
+        >
+          GraniteOS 2 Source Code
+        </a>
+      </footer>
 
     </div>
 
@@ -120,10 +144,12 @@ function DownloadMenu() {
           {DOWNLOADS.map((download) => (
 
             <a
-              key={download.file}
+              key={download.href}
               role="menuitem"
-              href={download.file}
-              download
+              href={download.href}
+              {...(download.download
+                ? { download: true }
+                : { target: '_blank', rel: 'noopener noreferrer' })}
               onClick={() => setOpen(false)}
               className="block px-5 py-2.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100"
             >
