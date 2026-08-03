@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_ROOT="$(cd "$ROOT/.." && pwd)"
 DEST="$ROOT/frontend/public/assets"
+DOWNLOADS="$ROOT/frontend/public/downloads"
 KERNEL="$REPO_ROOT/zig-out/bin/kernel"
 DISK="$REPO_ROOT/disk.img"
 GRANITE2_ROOT="$(cd "$REPO_ROOT/../GraniteOS-2" && pwd)"
@@ -46,3 +47,15 @@ cp -f "$GRANITE2_BUNDLE" "$GRANITE2_DEST/bundle.img"
 cp -f "$GRANITE2_DISK" "$GRANITE2_DEST/disk.img"
 
 echo "Assets copied to $DEST"
+
+# Download bundles offered on the site. `python -m zipfile` beats depending on a
+# zip binary that Windows and slim CI images do not ship.
+mkdir -p "$DOWNLOADS"
+
+cp -f "$REPO_ROOT/README.md" "$DEST/README.md"
+cp -f "$GRANITE2_ROOT/README.md" "$GRANITE2_DEST/README.md"
+
+(cd "$DEST" && python3 -m zipfile -c "$DOWNLOADS/graniteos-1.zip" kernel disk.img README.md)
+(cd "$GRANITE2_DEST" && python3 -m zipfile -c "$DOWNLOADS/graniteos-2.zip" granite-kernel.bin bundle.img disk.img README.md)
+
+echo "Download bundles written to $DOWNLOADS"

@@ -11,6 +11,9 @@
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
+    "marked": "^18.0.7",
+    "mermaid": "^11.16.0",
+    "ogl": "^1.0.11",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "xterm-pty": "^0.12.0"
