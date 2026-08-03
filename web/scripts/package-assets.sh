@@ -55,7 +55,7 @@ mkdir -p "$DOWNLOADS"
 cp -f "$REPO_ROOT/README.md" "$DEST/README.md"
 cp -f "$GRANITE2_ROOT/README.md" "$GRANITE2_DEST/README.md"
 
-(cd "$DEST" && python3 -m zipfile -c "$DOWNLOADS/graniteos-1.zip" kernel disk.img README.md)
-(cd "$GRANITE2_DEST" && python3 -m zipfile -c "$DOWNLOADS/graniteos-2.zip" granite-kernel.bin bundle.img disk.img README.md)
+(cd "$DEST" && python3 -m zipfile -c "$DOWNLOADS/graniteos-1.zip" kernel README.md)
+(cd "$GRANITE2_DEST" && python3 -m zipfile -c "$DOWNLOADS/graniteos-2.zip" granite-kernel.bin bundle.img README.md)
 
 echo "Download bundles written to $DOWNLOADS"
