@@ -4,7 +4,6 @@ import Home from './pages/Home'
 // The site is served as static files with no rewrite rule, so routing lives in
 // the fragment. Everything after the page name is the page's own business.
 const Try = lazy(() => import('./pages/Try'))
-const Learn = lazy(() => import('./pages/Learn'))
 
 function currentRoute(): string {
 
@@ -26,10 +25,9 @@ export default function App() {
   }, [])
 
   // Any query on the fragment belongs to the page, not the route.
-  const [page, ...rest] = route.split('?')[0].split('/')
+  const page = route.split('?')[0].split('/')[0]
 
   if (page === 'try') return <Suspense fallback={<Loading />}><Try /></Suspense>
-  if (page === 'learn') return <Suspense fallback={<Loading />}><Learn section={rest.join('/')} /></Suspense>
 
   return <Home />
 

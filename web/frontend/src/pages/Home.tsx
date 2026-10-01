@@ -43,13 +43,6 @@ export default function Home() {
 
           <DownloadMenu />
 
-          <a
-            href="#/learn"
-            className={`${BUTTON} border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900 hover:text-zinc-100`}
-          >
-            Learn About GraniteOS 2
-          </a>
-
         </nav>
 
       </main>
